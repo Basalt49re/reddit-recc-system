@@ -6,6 +6,7 @@ import logging
 from chromadb.config import Settings
 from embedding_utils import get_embedding
 import concurrent.futures
+import os
 
 def initialize_or_setup_db():
     """
@@ -63,49 +64,80 @@ def save_data(posts, post_collection):
         return len(posts)
     return 0
 
-
+def save_next_post(nextPost, secret_path):
+        try:
+            with open(secret_path, "r") as f:
+                secret = json.load(f)
+        except Exception:
+            secret = {}
+        secret["nextPost"] = nextPost
+        with open(secret_path, "w") as f:
+            json.dump(secret, f, indent=4)
 
 def main():
+    print("hello")
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
     post_collection = initialize_or_setup_db()
     total_embedded = 0
     req_count = 0
-    nextPost = None
-    while True:
-        url = "https://www.reddit.com/r/crypto/hot.json"
-        headers = {"User-Agent": "MyRedditApp/0.1 by OutlandishnessGrand8"}
-        params = {"limit": 100}
-        if nextPost:
-            params["after"] = nextPost
-        response = requests.get(url, headers=headers, params=params)
-        response.raise_for_status()
-        data = response.json()
 
-        req_count += 1
-        if req_count >= 100:
-            logging.info("Hit 100 requests, sleeping for 60 seconds to respect Reddit rate limits.")
-            time.sleep(60)
-            req_count = 0
+    # Load nextPost from secret.json if present
+    secret_path = os.path.join(os.path.dirname(__file__), "..", "secret.json")
+    secret_path = os.path.abspath(secret_path)
+    
+    try:
+        with open(secret_path, "r") as f:
+            secret = json.load(f)
+            nextPost = secret.get("nextPost", None)
+    except Exception:
+        nextPost = None
 
-        nextPost = data.get("data", {}).get("after", None)
-        posts = data.get("data", {}).get("children", [])
+    try:
+        while True:
+            print(f"hi")
+            url = "https://www.reddit.com/r/crypto/hot.json"
+            headers = {"User-Agent": "MyRedditApp/0.1 by OutlandishnessGrand8"}
+            params = {"limit": 100}
+            if nextPost:
+                params["after"] = nextPost
+            response = requests.get(url, headers=headers, params=params)
+            response.raise_for_status()
+            data = response.json()
 
-        if not posts:
-            logging.info("No more posts returned by API. Exiting loop.")
-            break
+            req_count += 1
+            if req_count >= 100:
+                logging.info("Hit 100 requests, sleeping for 60 seconds to respect Reddit rate limits.")
+                time.sleep(60)
+                req_count = 0
 
-        batch_count = save_data(posts, post_collection)
-        total_embedded += batch_count
-        logging.info(f"Total embedded posts so far: {total_embedded}")
+            nextPost = data.get("data", {}).get("after", None)
+            posts = data.get("data", {}).get("children", [])
 
-        if not nextPost:
-            logging.info("No nextPost value returned by API. Exiting loop.")
-            break
+            if not posts:
+                logging.info("No more posts returned by API. Exiting loop.")
+                save_next_post(nextPost, secret_path)
+                break
 
-        # Sleep to ensure we don't exceed 100 requests/minute
-        time.sleep(0.7)
+            batch_count = save_data(posts, post_collection)
+            total_embedded += batch_count
+            logging.info(f"Total embedded posts so far: {total_embedded}")
 
-        print(f"done!")
+            save_next_post(nextPost, secret_path)
+
+            if not nextPost:
+                logging.info("No nextPost value returned by API. Exiting loop.")
+                break
+
+            # Sleep to ensure we don't exceed 100 requests/minute
+            time.sleep(0.7)
+
+    except KeyboardInterrupt:
+        logging.info("Script interrupted by user. Saving nextPost for recovery.")
+        save_next_post(nextPost, secret_path)
+   
+    except Exception as e:
+        logging.error(f"Script stopped due to error: {e}. Saving nextPost for recovery.")
+        save_next_post(nextPost, secret_path)
 
 if __name__ == "__main__":
     main()
