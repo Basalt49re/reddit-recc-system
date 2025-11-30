@@ -16,8 +16,8 @@ export default function CryptoRecommender() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Update this to your actual backend URL
-  const API_ENDPOINT = 'http://localhost:8000/search';
+  // FIXED: Single API endpoint
+  const API_URL = 'https://reddit-recc-system.onrender.com';
 
   const handleSearch = async (searchTopic) => {
     const query = (searchTopic ?? topic).trim();
@@ -31,8 +31,9 @@ export default function CryptoRecommender() {
     setResults(null);
 
     try {
+      // FIXED: Use API_URL consistently
       const response = await fetch(
-        `${API_ENDPOINT}?q=${encodeURIComponent(query)}&n=10`,
+        `${API_URL}/search?q=${encodeURIComponent(query)}&n=10`,
         {
           method: 'GET',
           headers: {
@@ -54,7 +55,7 @@ export default function CryptoRecommender() {
       
       setResults(data);
     } catch (err) {
-      setError(`Failed to load recommendations: ${err.message}`);
+      setError(`Failed to load recommendations: ${err.message}. Server may be waking up (30s), please try again.`);
       console.error('Search error:', err);
       setResults(null);
     } finally {
@@ -135,6 +136,14 @@ export default function CryptoRecommender() {
             {error && (
               <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
                 <p className="text-red-600 text-sm">{error}</p>
+              </div>
+            )}
+
+            {loading && (
+              <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-blue-600 text-sm">
+                  🔄 Loading... First request may take 30s if server is sleeping
+                </p>
               </div>
             )}
 
