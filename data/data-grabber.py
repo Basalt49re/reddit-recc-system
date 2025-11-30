@@ -1,15 +1,18 @@
 import os
-os.environ['TQDM_DISABLE'] = '1'
 
-import requests
-import chromadb
+os.environ["TQDM_DISABLE"] = "1"
+
+import concurrent.futures
 import json
-import time
 import logging
+import os
+import time
+
+import chromadb
+import requests
 from chromadb.config import Settings
 from embedding_utils import get_embedding
-import concurrent.futures
-import os
+
 
 def initialize_or_setup_db():
     """
@@ -17,15 +20,13 @@ def initialize_or_setup_db():
     Returns: collection to write to
     """
     client = chromadb.PersistentClient(
-        path="data",
-        settings=Settings(anonymized_telemetry=False)
+        path="", settings=Settings(anonymized_telemetry=False)
     )
 
-
-    
     collection = client.get_or_create_collection("reddit_posts")
-    
+
     return collection
+
 
 def process_post(post):
     """
@@ -37,7 +38,7 @@ def process_post(post):
     # Skip no ID post
     if not post_id:
         return None
-    
+
     content = post.get("selftext", "")
     title = post.get("title", "")
     full_content = f"{title}\n{content}" if content else title
@@ -47,10 +48,14 @@ def process_post(post):
         "title": title if title is not None else "",
         "subreddit": post.get("subreddit") or "",
         "author": post.get("author") or "",
-        "timestamp": post.get("created_utc") if post.get("created_utc") is not None else 0,
+        "timestamp": post.get("created_utc")
+        if post.get("created_utc") is not None
+        else 0,
         "upvotes": post.get("ups") if post.get("ups") is not None else 0,
-        "num_comments": post.get("num_comments") if post.get("num_comments") is not None else 0,
-        "flair": post.get("link_flair_text") or ""
+        "num_comments": post.get("num_comments")
+        if post.get("num_comments") is not None
+        else 0,
+        "flair": post.get("link_flair_text") or "",
     }
 
     # Fetch embedding from sentence transformer
@@ -59,9 +64,10 @@ def process_post(post):
     # Return post_id, post information, metadata, and embedding to store inside chroma
     return post_id, full_content, metadata, embedding
 
+
 def save_data(posts, post_collection):
     """given a list of dictionaries, save to chromadb database"""
-    
+
     # Concurrently process posts, store into a list
     with concurrent.futures.ThreadPoolExecutor() as executor:
         results = list(executor.map(process_post, posts))
@@ -85,11 +91,12 @@ def save_data(posts, post_collection):
             ids=list(ids),
             documents=list(documents),
             metadatas=list(metadatas),
-            embeddings=list(embeddings)
+            embeddings=list(embeddings),
         )
         logging.info(f"Embedded and stored {len(unique_results)} posts in this batch.")
         return len(unique_results)
     return 0
+
 
 def save_next_post(nextPost, secret_path):
     """
@@ -105,6 +112,7 @@ def save_next_post(nextPost, secret_path):
     with open(secret_path, "w") as f:
         json.dump(secret, f, indent=4)
 
+
 def save_total_processed(total_processed, secret_path):
     """
     Given secret json, and current total number processed:
@@ -119,11 +127,14 @@ def save_total_processed(total_processed, secret_path):
     with open(secret_path, "w") as f:
         json.dump(secret, f, indent=4)
 
+
 def main():
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s %(levelname)s: %(message)s"
+    )
     post_collection = initialize_or_setup_db()
     total_embedded = 0
-    
+
     # Load nextTimestamp from secret.json if present
     secret_path = os.path.join(os.path.dirname(__file__), "..", "secret.json")
     secret_path = os.path.abspath(secret_path)
@@ -136,12 +147,14 @@ def main():
 
     # Start from September 18, 2024 if not present --> This date is the last date for data to be logged to this API!
     import datetime
+
     if not nextTimestamp:
         dt = datetime.datetime(2024, 9, 18, 0, 0)
         nextTimestamp = int(dt.timestamp())
 
     # Rate limit tracking
     from collections import deque
+
     req_minute = deque()
     req_hour = deque()
 
@@ -168,7 +181,7 @@ def main():
 
             Sleep to reset rate limiting bucket
             """
-            
+
             while req_minute and now - req_minute[0] > 60:
                 req_minute.popleft()
             while req_hour and now - req_hour[0] > 3600:
@@ -192,7 +205,9 @@ def main():
             params = {
                 "subreddit": "CryptoCurrency",
                 "size": 100,
-                "before": int(nextTimestamp),  # get posts before this timestamp, ensure integer
+                "before": int(
+                    nextTimestamp
+                ),  # get posts before this timestamp, ensure integer
                 "sort": "desc",  # newest first
             }
 
@@ -202,11 +217,11 @@ def main():
                 req_hour.append(now)
                 response.raise_for_status()
                 data = response.json()
-            
+
             # Log any API errors, for debugging
             except requests.exceptions.RequestException as e:
                 logging.error(f"API request error: {e}")
-                if hasattr(e, 'response') and e.response is not None:
+                if hasattr(e, "response") and e.response is not None:
                     logging.error(f"API response text: {e.response.text}")
                 save_next_timestamp(nextTimestamp)
                 break
@@ -223,7 +238,14 @@ def main():
             save_total_processed(total_embedded, secret_path)
 
             # Calculate next date to get posts from
-            oldest = min((p.get("created_utc", nextTimestamp) for p in posts if p.get("created_utc")), default=nextTimestamp)
+            oldest = min(
+                (
+                    p.get("created_utc", nextTimestamp)
+                    for p in posts
+                    if p.get("created_utc")
+                ),
+                default=nextTimestamp,
+            )
             nextTimestamp = oldest - 1
             save_next_timestamp(nextTimestamp)
 
@@ -234,8 +256,14 @@ def main():
                 prev_day = dt - datetime.timedelta(days=1)
 
                 # Set nextTimestamp to midnight UTC of previous day
-                nextTimestamp = int(datetime.datetime(prev_day.year, prev_day.month, prev_day.day, 0, 0).timestamp())
-                logging.info(f"Moving to previous day: {prev_day.strftime('%Y-%m-%d')}, nextTimestamp={nextTimestamp}")
+                nextTimestamp = int(
+                    datetime.datetime(
+                        prev_day.year, prev_day.month, prev_day.day, 0, 0
+                    ).timestamp()
+                )
+                logging.info(
+                    f"Moving to previous day: {prev_day.strftime('%Y-%m-%d')}, nextTimestamp={nextTimestamp}"
+                )
                 save_next_timestamp(nextTimestamp)
 
                 continue
@@ -244,8 +272,11 @@ def main():
         logging.info("Script interrupted by user. Saving nextTimestamp for recovery.")
         save_next_timestamp(nextTimestamp)
     except Exception as e:
-        logging.error(f"Script stopped due to error: {e}. Saving nextTimestamp for recovery.")
+        logging.error(
+            f"Script stopped due to error: {e}. Saving nextTimestamp for recovery."
+        )
         save_next_timestamp(nextTimestamp)
+
 
 if __name__ == "__main__":
     main()
