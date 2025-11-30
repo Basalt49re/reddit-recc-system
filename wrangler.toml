@@ -1,0 +1,7 @@
+name = "reddit-recc-system-backend"
+main = "backend.py"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["python_workers"]
+
+[vars]
+DB_PATH = "data/chroma.sqlite"
