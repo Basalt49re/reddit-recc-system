@@ -1,10 +1,32 @@
 # Import libraries
+import sqlite3
+import json
+import os
 import chromadb
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from sentence_transformers import SentenceTransformer
 import logging
 import threading
+
+
+DB_PATH = os.environ.get("DB_PATH", "data/chroma.sqlite")
+
+def on_request(request):
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+
+        # Example query
+        rows = cur.execute("SELECT name FROM sqlite_master WHERE type='table';").fetchall()
+
+        return json.dumps({
+            "tables": rows
+        })
+
+    except Exception as e:
+        return json.dumps({"error": str(e)})
+    
 
 # Initialize components
 # Set up logging
@@ -84,5 +106,9 @@ def search_posts():
         return jsonify({"error": "Internal server error"}), 500
 
    
+#if __name__ == "__main__":
+   # app.run(debug=True, port=8000) # debug=True enables debug mode and auto-reloading
+
 if __name__ == "__main__":
-    app.run(debug=True, port=8000) # debug=True enables debug mode and auto-reloading
+    port = int(os.environ.get("PORT", 8000))
+    app.run(host="0.0.0.0", port=port, debug=False)  
