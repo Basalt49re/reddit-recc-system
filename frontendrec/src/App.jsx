@@ -117,7 +117,7 @@ export default function CryptoRecommender() {
                 className="h-4 w-4 text-blue-600 border-gray-300 rounded cursor-pointer"
               />
               <label htmlFor="remember-choice" className="ml-2 text-gray-700 text-sm select-none cursor-pointer">
-                Remember my choice
+                Remember my choice/Hide popup next time.
               </label>
             </div>
             <button
