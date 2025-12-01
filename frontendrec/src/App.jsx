@@ -49,7 +49,7 @@ export default function CryptoRecommender() {
 
     try {
       const response = await fetch(
-        `${API_ENDPOINT}?q=${encodeURIComponent(query)}&n=10`,
+        `${API_ENDPOINT}?q=${encodeURIComponent(query)}&n=100`,
         {
           method: 'GET',
           headers: {

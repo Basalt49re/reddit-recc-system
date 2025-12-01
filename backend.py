@@ -61,7 +61,7 @@ def search_posts():
         JSON: {query, total_results, posts[]}
     """
     query = request.args.get('q', '').strip()
-    n_results = max(1, min(20, int(request.args.get('n',5))))  # Limit results between 1 and 20
+    n_results = max(1, int(request.args.get('n',5)))  # Limit results between 1 and 20
     if not query:
         return jsonify({"error": "q parameter is required"}), 400
 
