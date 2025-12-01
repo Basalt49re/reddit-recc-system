@@ -1,9 +1,7 @@
 /* index.css - replace your current file with this */
 
 /* Tailwind base / components / utilities (proper directives) */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 /* simple reset (keeps tailwind base but ensures full height) */
 * {
