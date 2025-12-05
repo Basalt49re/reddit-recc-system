@@ -58,6 +58,10 @@ def process_post(post):
     title = post.get("title", "")
     full_content = f"{title}\n{content}" if content else title
 
+    # Skip posts with "[removed]" in title, content, or full_content
+    if "[removed]" in title or "[removed]" in content or "[removed]" in full_content:
+        return None
+
     # Replace None values with type-appropriate defaults
     metadata = {
         "title": title if title is not None else "",
