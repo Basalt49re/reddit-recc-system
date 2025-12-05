@@ -65,7 +65,9 @@ def search_posts():
         JSON: {query, total_results, posts[]}
     """
     query = request.args.get("q", "").strip()
-    n_results = max(1, min(20, int(request.args.get("n", 5))))
+    n_results = max(1, min(30, int(request.args.get("n", 5))))
+    upvote_minimum = int(request.args.get("upvotes_min", 0))
+
     if not query:
         return jsonify({"error": "q parameter is required"}), 400
 
@@ -89,6 +91,11 @@ def search_posts():
 
         for i in range(len(ids_list)):
             meta = metas_list[i]
+
+            # If it doesn't return 
+            if meta.get("upvotes", 0) < upvote_minimum:
+                continue
+
             post_data = {
                 "id": ids_list[i],
                 "title": meta.get("title", "No Title"),
