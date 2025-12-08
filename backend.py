@@ -66,7 +66,7 @@ def search_posts():
         JSON: {query, total_results, posts[]}
     """
     query = request.args.get("q", "").strip()
-    n_results = max(1, min(30, int(request.args.get("n", 5))))
+    n_results = int(request.args.get("n", 20))
     upvote_minimum = int(request.args.get("upvotes_min", 0))
 
     if not query:
