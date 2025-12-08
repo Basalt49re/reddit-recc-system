@@ -36,46 +36,49 @@ export default function CryptoRecommender() {
   };
 
   // Your backend endpoint
-  const API_ENDPOINT = 'https://spraybottleapp.blacksea-eb2acaf9.westus2.azurecontainerapps.io/search';
+  const API_ENDPOINT = 'https://spraybottleapp.calmmushroom-85f2636c.westus2.azurecontainerapps.io/search';
+  
   //const API_ENDPOINT = 'http://127.0.0.1:8000/search';
   const handleSearch = async (searchTopic) => {
-    const query = (searchTopic ?? topic).trim();
-    if (!query) {
-      setError('Please enter a cryptocurrency');
-      return;
+  const query = (searchTopic ?? topic).trim();
+  if (!query) {
+    setError('Please enter a cryptocurrency');
+    return;
+  }
+
+  setLoading(true);
+  setError('');
+  setResults(null);
+
+  // Defensive query param construction
+  const params = new URLSearchParams({
+    q: query,
+    n: String(maxNumPosts || 5),
+    upvotes_min: String(minUpvotes || 0),
+  });
+  const url = `${API_ENDPOINT}?${params.toString()}`;
+  console.log('FETCH URL:', url);
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    setLoading(true);
-    setError('');
+    const data = await response.json();
+    if (data.error) throw new Error(data.error);
+    setResults(data);
+  } catch (err) {
+    setError(`Failed to load recommendations: ${err.message}`);
     setResults(null);
-
-    try {
-      const response = await fetch(
-        `${API_ENDPOINT}?q=${encodeURIComponent(query)}&n=${maxNumPosts}&upvotes_min=${minUpvotes}`,
-        {
-          method: 'GET',
-          headers: {
-        'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      if (data.error) {
-        throw new Error(data.error);
-      }
-      setResults(data);
-    } catch (err) {
-      setError(`Failed to load recommendations: ${err.message}`);
-      setResults(null);
-    } finally {
-      setLoading(false);
-    }
-  };
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Chart transformation
   const chartData =
