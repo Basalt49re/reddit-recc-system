@@ -13,6 +13,9 @@ import requests
 from chromadb.config import Settings
 from embedding_utils import get_embedding
 
+"""
+Docstrings were created by AI, comments were made by me
+"""
 
 def initialize_or_setup_db():
     """
@@ -29,7 +32,8 @@ def initialize_or_setup_db():
         collection = client.get_or_create_collection("reddit_posts")
         return collection
     except Exception as e:
-        # Detect pickle/hnsw deserialization errors and reset database
+        # Detect pickle/hnsw deserialization errors and reset database 
+        # This exception is AI output generated for debugging
         if "deserializing pickle file" in str(e) or "hnsw segment reader" in str(e):
             logging.error("ChromaDB database corrupted. Removing and recreating database directory.")
             shutil.rmtree(db_path, ignore_errors=True)
@@ -88,6 +92,7 @@ def save_data(posts, post_collection):
     """given a list of dictionaries, save to chromadb database"""
 
     # Concurrently process posts, store into a list
+    # This threaded results collection (line 96-97) was created by AI to concurrently process posts
     with concurrent.futures.ThreadPoolExecutor() as executor:
         results = list(executor.map(process_post, posts))
 
@@ -116,7 +121,7 @@ def save_data(posts, post_collection):
         return len(unique_results)
     return 0
 
-
+# save_next_post is a helper function, and was created by AI
 def save_next_post(nextPost, secret_path):
     """
     Given the next post's id, and a path to secret json:
@@ -131,7 +136,7 @@ def save_next_post(nextPost, secret_path):
     with open(secret_path, "w") as f:
         json.dump(secret, f, indent=4)
 
-
+# save_total_processed is a helper function, and was created by AI
 def save_total_processed(total_processed, secret_path):
     """
     Given secret json, and current total number processed:
@@ -178,6 +183,7 @@ def main():
     req_hour = deque()
 
     # Saving next timestamp
+    # save_next_timestamp is a helper function, and was created by AI
     def save_next_timestamp(ts):
         try:
             with open(secret_path, "r") as f:
