@@ -26,8 +26,8 @@ export default function CryptoRecommender() {
   };
 
   // TEST WITH LOCAL
-  const API_ENDPOINT = 'http://127.0.0.1:8000/search';
-
+  //const API_ENDPOINT = 'http://127.0.0.1:8000/search';
+  const API_ENDPOINT = 'https://spraybottleapp.calmmushroom-85f2636c.westus2.azurecontainerapps.io/search';
   const handleSearch = async () => {
     const query = topic.trim();
     if (!query) {
